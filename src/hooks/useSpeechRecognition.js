@@ -10,7 +10,7 @@ export const useSpeechRecognition = () => {
   const analyserRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const animationFrameRef = useRef(null);
-  
+
   const onStopCallbackRef = useRef(null);
 
   /**
@@ -100,7 +100,7 @@ export const useSpeechRecognition = () => {
         audioContextRef.current?.close();
 
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current.mimeType });
-        
+
         isRecordingRef.current = false;
         setRecording(false);
         console.log("Recording stopped");
@@ -119,11 +119,10 @@ export const useSpeechRecognition = () => {
 
   const startRecording = useCallback(async (onStopCallback = null) => {
     if (isRecordingRef.current) {
-      console.log("startRecording: already active, returning");
+      console.log("Already recording");
       return;
     }
-    isRecordingRef.current = true;
-    setRecording(true);
+
     console.log("Recording started");
 
     audioChunksRef.current = [];
@@ -141,6 +140,8 @@ export const useSpeechRecognition = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      isRecordingRef.current = true;
+      setRecording(true);
       console.log("Microphone permission granted");
 
       const audioContext = new AudioContext();
@@ -173,7 +174,7 @@ export const useSpeechRecognition = () => {
 
       mediaRecorder.start(250); // Get chunks every 250ms
       console.log("MediaRecorder started");
-      
+
       // Play start beep
       playStartBeep();
 
@@ -195,13 +196,13 @@ export const useSpeechRecognition = () => {
         const volume = Math.sqrt(sum / data.length);
 
         const elapsed = Date.now() - startTime;
-        if (elapsed > 500) { // Ignore the first 500 ms after recording starts
-          if (volume > 0.015) { // Threshold = 0.015
+        if (elapsed > 1500) { // Ignore the first 500 ms after recording starts
+          if (volume > 0.04) {
             lastActiveTime = Date.now();
           }
 
           const silentDuration = Date.now() - lastActiveTime;
-          if (silentDuration >= 1800) { // Silence duration = 1800 ms
+          if (silentDuration >= 3000) { // Silence duration = 1800 ms
             console.log("Silence limit of 1800 ms reached. Stopping recording.");
             stopRecording();
             return;
@@ -224,7 +225,7 @@ export const useSpeechRecognition = () => {
       setRecording(false);
       throw err;
     }
-  }, [recording, playStartBeep, stopRecording]);
+  }, [playStartBeep, stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {

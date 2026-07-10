@@ -68,30 +68,54 @@ export const Home = ({
   // Voice loop state transition manager
   useEffect(() => {
     console.log("STATE:", appState);
-    
+
     if (appState === 'IDLE') {
       startPassiveListening();
-    } else if (appState === 'LISTENING') {
+    }
+
+    else if (appState === 'LISTENING') {
       startMathQuestionRecording();
-    } else if (appState === 'COMMAND_WAIT') {
+    }
+
+    else if (appState === 'COMMAND_WAIT') {
       startCommandListening();
     }
+
   }, [appState]);
 
   // Welcome message on mount
   useEffect(() => {
+
+    let mounted = true;
+
     const timer = setTimeout(() => {
-      speak("Welcome to BlindCalc. Say Start to begin.", () => {
-        setAppState('IDLE');
-      });
+
+      if (!mounted) return;
+
+      speak(
+        "Welcome to BlindCalc. Say Start to begin.",
+        () => {
+          if (mounted) {
+            setAppState('IDLE');
+          }
+        }
+      );
+
     }, 1500);
 
+
     return () => {
+      mounted = false;
       clearTimeout(timer);
     };
-  }, []);
 
+  }, []);
   const startPassiveListening = async () => {
+
+    if (calculating) {
+      console.log("Already processing, skipping passive listener");
+      return;
+    }
     setErrorMsg(null);
     try {
       await startRecording(async (audioBlob) => {
@@ -111,7 +135,11 @@ export const Home = ({
             console.log("Wake word detected");
             setAppState('LISTENING');
           } else {
-            setAppState('IDLE');
+            console.log("Wake word not detected. Restarting passive listening after delay.");
+
+            setTimeout(() => {
+              setAppState('IDLE');
+            }, 1500);
           }
         } catch (err) {
           console.error("Transcribe error in passive listening:", err);
@@ -130,15 +158,16 @@ export const Home = ({
   const startMathQuestionRecording = async () => {
     setErrorMsg(null);
     try {
+      if (calculating) return;
       await startRecording(async (audioBlob) => {
         setAppState('PROCESSING');
         playProcessingBeep();
-        
+
         try {
           // Send audio directly to voice-calculate
           const result = await apiService.calculateVoice(audioBlob);
           playSuccessBeep();
-          
+
           console.log("Transcript:", result.query);
           console.log("Math query:", result.query);
 
@@ -178,12 +207,16 @@ export const Home = ({
   };
 
   const startCommandListening = async () => {
+    if (calculating) {
+      console.log("Already processing command");
+      return;
+    }
     setErrorMsg(null);
     try {
       await startRecording(async (audioBlob) => {
         setAppState('PROCESSING');
         playProcessingBeep();
-        
+
         try {
           const data = await apiService.transcribeVoice(audioBlob);
           const transcript = data.text || "";
