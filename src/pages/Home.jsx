@@ -25,6 +25,7 @@ export const Home = ({
   const [historyTrigger, setHistoryTrigger] = useState(0);
 
   const textInputRef = useRef(null);
+  const voiceSessionRef = useRef(false);
 
   const {
     recording,
@@ -67,22 +68,42 @@ export const Home = ({
 
   // Voice loop state transition manager
   useEffect(() => {
+
     console.log("STATE:", appState);
 
     if (appState === 'IDLE') {
+
+      if (voiceSessionRef.current) {
+        console.log("Voice session already active");
+        return;
+      }
+
+      voiceSessionRef.current = true;
       startPassiveListening();
+
     }
 
     else if (appState === 'LISTENING') {
+
+      voiceSessionRef.current = true;
       startMathQuestionRecording();
+
     }
 
     else if (appState === 'COMMAND_WAIT') {
+
+      voiceSessionRef.current = true;
       startCommandListening();
+
+    }
+
+    else if (appState === 'welcome') {
+
+      voiceSessionRef.current = false;
+
     }
 
   }, [appState]);
-
   // Welcome message on mount
   useEffect(() => {
 
@@ -133,6 +154,7 @@ export const Home = ({
             text.includes("hello calculator")
           ) {
             console.log("Wake word detected");
+            voiceSessionRef.current = false;
             setAppState('LISTENING');
           } else {
             console.log("Wake word not detected. Restarting passive listening after delay.");
