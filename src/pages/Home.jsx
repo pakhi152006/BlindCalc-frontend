@@ -67,33 +67,28 @@ export const Home = ({
   }, [appState]);
 
   // Voice loop state transition manager
+  // Voice state manager
   useEffect(() => {
 
-    console.log("STATE:", appState, "Speaking:", speaking);
+    console.log("CURRENT STATE:", appState);
 
-
-    // IMPORTANT:
-    // Never open microphone while TTS is talking
-    if (speaking) {
-      console.log("Speech active - microphone paused");
+    if (appState === "welcome") {
+      voiceSessionRef.current = false;
       return;
     }
 
 
-    if (appState === 'IDLE') {
+    if (appState === "IDLE") {
 
-      if (voiceSessionRef.current) {
-        console.log("Voice session already active");
-        return;
+      if (!voiceSessionRef.current) {
+        voiceSessionRef.current = true;
+        startPassiveListening();
       }
-
-      voiceSessionRef.current = true;
-      startPassiveListening();
 
     }
 
 
-    else if (appState === 'LISTENING') {
+    if (appState === "LISTENING") {
 
       voiceSessionRef.current = true;
       startMathQuestionRecording();
@@ -101,7 +96,7 @@ export const Home = ({
     }
 
 
-    else if (appState === 'COMMAND_WAIT') {
+    if (appState === "COMMAND_WAIT") {
 
       voiceSessionRef.current = true;
       startCommandListening();
@@ -109,14 +104,7 @@ export const Home = ({
     }
 
 
-    else if (appState === 'welcome') {
-
-      voiceSessionRef.current = false;
-
-    }
-
-
-  }, [appState, speaking]);
+  }, [appState]);
   // Welcome message on mount
   useEffect(() => {
 
@@ -132,9 +120,7 @@ export const Home = ({
 
           if (mounted) {
 
-            setTimeout(() => {
-              setAppState('IDLE');
-            }, 1000);
+            setAppState('IDLE');
 
           }
 
@@ -152,63 +138,106 @@ export const Home = ({
   }, []);
   const startPassiveListening = async () => {
 
-    if (speaking) {
-      console.log("TTS active, skipping passive listening");
-      return;
-    }
+    console.log("Passive listening started");
 
-    if (calculating) {
-      console.log("Already processing, skipping passive listener");
-      return;
-    }
-    setErrorMsg(null);
+
     try {
-      await startRecording(async (audioBlob) => {
-        setAppState('PROCESSING');
-        try {
-          const data = await apiService.transcribeVoice(audioBlob);
-          const transcript = data.text || "";
-          console.log("Transcript:", transcript);
 
-          const text = transcript.toLowerCase().trim();
+      await startRecording(async (audioBlob) => {
+
+        console.log("Wake audio captured");
+
+
+        setAppState("PROCESSING");
+
+
+        try {
+
+          const data = await apiService.transcribeVoice(audioBlob);
+
+          const text = (data.text || "")
+            .toLowerCase()
+            .trim();
+
+
+          console.log("Wake transcript:", text);
+
+
           if (
             text.includes("start") ||
-            text.includes("start calculator") ||
             text.includes("begin") ||
-            text.includes("hello calculator")
+            text.includes("calculator")
           ) {
-            console.log("Wake word detected");
+
+            console.log("START DETECTED");
+
+
             voiceSessionRef.current = false;
+
+
             setTimeout(() => {
-              setAppState('LISTENING');
+
+              setAppState("LISTENING");
+
             }, 500);
-          } else {
-            console.log("Wake word not detected. Restarting passive listening after delay.");
+
+
+
+          }
+          else {
+
+            console.log("No wake word");
+
+
+            voiceSessionRef.current = false;
+
 
             setTimeout(() => {
-              setAppState('IDLE');
-            }, 1500);
-          }
-        } catch (err) {
-          console.error("Transcribe error in passive listening:", err);
-          setAppState('IDLE');
-        }
-      });
-    } catch (err) {
-      console.error("Microphone start failed in IDLE:", err);
-      playWarningBeep();
-      setErrorMsg("Microphone access denied or unavailable.");
-      speak("Error. Microphone access was denied. Please check your browser settings.");
-      makeAnnouncement("Error. Microphone access was denied. Please check your browser settings.");
-    }
-  };
 
+              setAppState("IDLE");
+
+            }, 1000);
+
+          }
+
+
+        }
+        catch (err) {
+
+          console.error(err);
+
+          voiceSessionRef.current = false;
+
+          setAppState("IDLE");
+
+        }
+
+
+      });
+
+
+    }
+    catch (err) {
+
+      console.error(
+        "Mic error:",
+        err
+      );
+
+
+      playWarningBeep();
+
+      setErrorMsg(
+        "Microphone unavailable"
+      );
+
+    }
+
+  };
   const startMathQuestionRecording = async () => {
 
-    if (speaking) {
-      console.log("TTS active, skipping question recording");
-      return;
-    }
+    console.log("Listening for math question");
+
 
     setErrorMsg(null);
     try {
