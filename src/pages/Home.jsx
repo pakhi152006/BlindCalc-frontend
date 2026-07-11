@@ -69,7 +69,16 @@ export const Home = ({
   // Voice loop state transition manager
   useEffect(() => {
 
-    console.log("STATE:", appState);
+    console.log("STATE:", appState, "Speaking:", speaking);
+
+
+    // IMPORTANT:
+    // Never open microphone while TTS is talking
+    if (speaking) {
+      console.log("Speech active - microphone paused");
+      return;
+    }
+
 
     if (appState === 'IDLE') {
 
@@ -83,12 +92,14 @@ export const Home = ({
 
     }
 
+
     else if (appState === 'LISTENING') {
 
       voiceSessionRef.current = true;
       startMathQuestionRecording();
 
     }
+
 
     else if (appState === 'COMMAND_WAIT') {
 
@@ -97,13 +108,15 @@ export const Home = ({
 
     }
 
+
     else if (appState === 'welcome') {
 
       voiceSessionRef.current = false;
 
     }
 
-  }, [appState]);
+
+  }, [appState, speaking]);
   // Welcome message on mount
   useEffect(() => {
 
@@ -116,9 +129,15 @@ export const Home = ({
       speak(
         "Welcome to BlindCalc. Say Start to begin.",
         () => {
+
           if (mounted) {
-            setAppState('IDLE');
+
+            setTimeout(() => {
+              setAppState('IDLE');
+            }, 1000);
+
           }
+
         }
       );
 
@@ -132,6 +151,11 @@ export const Home = ({
 
   }, []);
   const startPassiveListening = async () => {
+
+    if (speaking) {
+      console.log("TTS active, skipping passive listening");
+      return;
+    }
 
     if (calculating) {
       console.log("Already processing, skipping passive listener");
@@ -155,7 +179,9 @@ export const Home = ({
           ) {
             console.log("Wake word detected");
             voiceSessionRef.current = false;
-            setAppState('LISTENING');
+            setTimeout(() => {
+              setAppState('LISTENING');
+            }, 500);
           } else {
             console.log("Wake word not detected. Restarting passive listening after delay.");
 
@@ -178,6 +204,12 @@ export const Home = ({
   };
 
   const startMathQuestionRecording = async () => {
+
+    if (speaking) {
+      console.log("TTS active, skipping question recording");
+      return;
+    }
+
     setErrorMsg(null);
     try {
       if (calculating) return;
@@ -229,6 +261,12 @@ export const Home = ({
   };
 
   const startCommandListening = async () => {
+
+    if (speaking) {
+      console.log("TTS active, skipping command recording");
+      return;
+    }
+
     if (calculating) {
       console.log("Already processing command");
       return;
