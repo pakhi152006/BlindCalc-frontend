@@ -47,3 +47,19 @@ Text-to-Speech Feedback
 4. The expression is evaluated using the mathematical engine.
 5. The result is returned to the frontend.
 6. The result is communicated back to the user through speech.
+## Getting Started
+
+### Prerequisites
+
+Before running BlindCalc locally, make sure you have:
+
+- Node.js installed
+- npm installed
+- Git installed
+
+### Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/pakhi152006/BlindCalc-frontend.git
